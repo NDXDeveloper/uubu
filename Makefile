@@ -203,6 +203,7 @@ dev: ## Mode développement avec rebuild automatique
 	@while inotifywait -e modify *.go locales/*.json 2>/dev/null; do \
 		make build && echo "✅ Rebuild terminé"; \
 	done
+
 fmt: ## Formater automatiquement le code
 	@echo "🎨 Formatage du code..."
 	go fmt ./...
@@ -211,7 +212,7 @@ fmt: ## Formater automatiquement le code
 		goimports -w .; \
 	else \
 		echo "⚠️  goimports non installé. Installation..."; \
-		go install golang.org/x/tools/cmd/goimports@v0.21.0; \
+		go install golang.org/x/tools/cmd/goimports@latest; \
 		goimports -w .; \
 	fi
 
@@ -225,9 +226,6 @@ fix: ## Corriger automatiquement les erreurs de linting
 		golangci-lint run --fix; \
 	fi
 
-format-all: fmt fix ## Formater et corriger automatiquement tout le code
-	@echo "✨ Formatage et correction terminés"
-
 lint: ## Vérification du code avec formatage automatique
 	@echo "🎨 Formatage automatique..."
 	@make fmt
@@ -237,17 +235,30 @@ lint: ## Vérification du code avec formatage automatique
 	go vet ./...
 	@make validate-locales
 
-bench: ## Benchmarks de performance
-	@echo "⏱️  Benchmarks..."
-	go test -bench=. -benchmem ./...
-
 check: ## Vérification complète avant commit
 	@echo "🔄 Vérifications complètes..."
 	make validate-locales
 	make lint
 	make test-short
 	make test-langs
+	@if command -v govulncheck >/dev/null 2>&1; then \
+		echo "🔒 Vérification des vulnérabilités..."; \
+		govulncheck ./...; \
+	else \
+		echo "⚠️  govulncheck non installé. Installation et vérification..."; \
+		go install golang.org/x/vuln/cmd/govulncheck@latest; \
+		govulncheck ./...; \
+	fi
 	@echo "✅ Vérifications terminées - prêt pour commit!"
+
+format-all: fmt fix ## Formater et corriger automatiquement tout le code
+	@echo "✨ Formatage et correction terminés"
+
+bench: ## Benchmarks de performance
+	@echo "⏱️  Benchmarks..."
+	go test -bench=. -benchmem ./...
+
+
 
 # Nouvelle langue
 new-lang: ## Créer un template pour une nouvelle langue (usage: make new-lang LANG=it)
@@ -383,6 +394,161 @@ test-locales-structure: ## Tester la structure et cohérence des fichiers de loc
 		done; \
 	fi
 	@echo "🎉 Tous les fichiers de locales sont structurellement cohérents!"
+
+# Ajoutez ces cibles à votre Makefile existant (après la cible "help:")
+
+# Installation des outils Go
+install-tools: ## Installer tous les outils Go nécessaires
+	@echo "🔧 Installation des outils Go..."
+	@echo "📦 Installation de govulncheck..."
+	go install golang.org/x/vuln/cmd/govulncheck@latest
+	@echo "📦 Installation de golangci-lint..."
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@echo "📦 Installation de goimports..."
+	go install golang.org/x/tools/cmd/goimports@latest
+	@echo "📦 Installation de gofumpt (formateur avancé)..."
+	go install mvdan.cc/gofumpt@latest
+	@echo "📦 Installation de staticcheck..."
+	go install honnef.co/go/tools/cmd/staticcheck@latest
+	@echo "📦 Installation de gosec..."
+	go install github.com/securego/gosec/v2/cmd/gosec@latest
+	@echo "✅ Tous les outils Go installés avec succès!"
+
+check-tools: ## Vérifier si tous les outils Go sont installés
+	@echo "🔍 Vérification des outils Go..."
+	@tools="govulncheck golangci-lint goimports gofumpt staticcheck gosec"; \
+	missing=""; \
+	for tool in $$tools; do \
+		if command -v $$tool >/dev/null 2>&1; then \
+			echo "✅ $$tool: installé ($$($$tool --version 2>/dev/null | head -n1 || echo 'version inconnue'))"; \
+		else \
+			echo "❌ $$tool: manquant"; \
+			missing="$$missing $$tool"; \
+		fi; \
+	done; \
+	if [ -n "$$missing" ]; then \
+		echo "⚠️  Outils manquants:$$missing"; \
+		echo "💡 Exécutez 'make install-tools' pour les installer"; \
+		exit 1; \
+	else \
+		echo "🎉 Tous les outils sont installés!"; \
+	fi
+
+security: ## Analyse de sécurité complète
+	@echo "🔒 Analyse de sécurité complète..."
+	@echo "🔍 Vérification des vulnérabilités avec govulncheck..."
+	govulncheck ./...
+	@echo "🔍 Analyse de sécurité avec gosec..."
+	gosec ./...
+	@echo "✅ Analyse de sécurité terminée"
+
+security-install: ## Installer et exécuter l'analyse de sécurité
+	@echo "🔧 Installation des outils de sécurité si nécessaire..."
+	@if ! command -v govulncheck >/dev/null 2>&1; then \
+		echo "📦 Installation de govulncheck..."; \
+		go install golang.org/x/vuln/cmd/govulncheck@latest; \
+	fi
+	@if ! command -v gosec >/dev/null 2>&1; then \
+		echo "📦 Installation de gosec..."; \
+		go install github.com/securego/gosec/v2/cmd/gosec@latest; \
+	fi
+	@make security
+
+update-tools: ## Mettre à jour tous les outils Go
+	@echo "🔄 Mise à jour des outils Go..."
+	@echo "📦 Mise à jour de govulncheck..."
+	go install golang.org/x/vuln/cmd/govulncheck@latest
+	@echo "📦 Mise à jour de golangci-lint..."
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@echo "📦 Mise à jour de goimports..."
+	go install golang.org/x/tools/cmd/goimports@latest
+	@echo "📦 Mise à jour de gofumpt..."
+	go install mvdan.cc/gofumpt@latest
+	@echo "📦 Mise à jour de staticcheck..."
+	go install honnef.co/go/tools/cmd/staticcheck@latest
+	@echo "📦 Mise à jour de gosec..."
+	go install github.com/securego/gosec/v2/cmd/gosec@latest
+	@echo "✅ Tous les outils mis à jour!"
+
+# Versions améliorées des cibles existantes
+fmt-advanced: ## Formatage avancé avec gofumpt
+	@echo "🎨 Formatage avancé du code..."
+	@if command -v gofumpt >/dev/null 2>&1; then \
+		echo "📦 Formatage avec gofumpt..."; \
+		gofumpt -w .; \
+	else \
+		echo "⚠️  gofumpt non installé, utilisation de go fmt..."; \
+		go fmt ./...; \
+	fi
+	@if command -v goimports >/dev/null 2>&1; then \
+		echo "📦 Correction des imports..."; \
+		goimports -w .; \
+	else \
+		echo "⚠️  goimports non installé. Installation..."; \
+		go install golang.org/x/tools/cmd/goimports@latest; \
+		goimports -w .; \
+	fi
+
+lint-all: ## Vérification complète avec tous les linters
+	@echo "🔍 Vérification complète du code..."
+	@echo "🎨 Formatage automatique..."
+	@make fmt-advanced
+	@echo "🔧 golangci-lint..."
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run --fix; \
+	else \
+		echo "⚠️  golangci-lint non installé. Installation..."; \
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
+		golangci-lint run --fix; \
+	fi
+	@echo "🔍 staticcheck..."
+	@if command -v staticcheck >/dev/null 2>&1; then \
+		staticcheck ./...; \
+	else \
+		echo "⚠️  staticcheck non installé, passage..."; \
+	fi
+	@echo "🔍 go vet..."
+	go vet ./...
+	@echo "🌍 Validation des locales..."
+	@make validate-locales
+	@echo "✅ Vérification complète terminée"
+
+# Mise à jour de la cible check pour inclure la sécurité
+check-complete: ## Vérification complète avant commit (avec sécurité)
+	@echo "🔄 Vérifications complètes avec sécurité..."
+	make validate-locales
+	make lint-all
+	make test-short
+	make test-langs
+	make security-install
+	@echo "✅ Vérifications complètes terminées - prêt pour commit!"
+
+# Cible pour les nouveaux développeurs
+setup-dev: ## Configuration complète pour développeur (première fois)
+	@echo "🚀 Configuration de l'environnement de développement..."
+	@echo "📋 Vérification de Go..."
+	@go version || (echo "❌ Go n'est pas installé!" && exit 1)
+	@echo "🔧 Installation des outils de développement..."
+	@make install-tools
+	@echo "🧪 Test de l'environnement..."
+	@make check-complete
+	@echo "✅ Environnement de développement configuré!"
+	@echo "💡 Commandes utiles:"
+	@echo "   make help           - Afficher l'aide"
+	@echo "   make dev            - Mode développement"
+	@echo "   make check-complete - Vérification complète"
+	@echo "   make build-all      - Compiler pour toutes les architectures"
+
+clean-tools: ## Nettoyer les outils Go (pour réinstallation propre)
+	@echo "🧹 Nettoyage des outils Go..."
+	@tools="govulncheck golangci-lint goimports gofumpt staticcheck gosec"; \
+	for tool in $$tools; do \
+		if [ -f "$(shell go env GOPATH)/bin/$$tool" ]; then \
+			echo "🗑️  Suppression de $$tool..."; \
+			rm -f "$(shell go env GOPATH)/bin/$$tool"; \
+		fi; \
+	done
+	@echo "✅ Outils nettoyés. Exécutez 'make install-tools' pour les réinstaller."
 
 help: ## Afficher cette aide
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
