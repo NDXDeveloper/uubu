@@ -399,10 +399,30 @@ jobs:
 
           ### 🛠 Installation
           #### Ubuntu/Debian (DEB - Recommended)
+
+          ##### Method A: Recommended (handles dependencies)
+
+          **AMD64 systems:**
+          ```bash
+          wget https://github.com/NDXDeveloper/uubu/releases/download/${{ github.ref_name }}/uubu-${{ github.ref_name }}-amd64.deb
+          sudo apt install ./uubu-${{ github.ref_name }}-amd64.deb
+          uubu --version
+          ```
+
+          **ARM64 systems (Raspberry Pi, etc.):**
+          ```bash
+          wget https://github.com/NDXDeveloper/uubu/releases/download/${{ github.ref_name }}/uubu-${{ github.ref_name }}-arm64.deb
+          sudo apt install ./uubu-${{ github.ref_name }}-arm64.deb
+          uubu --version
+          ```
+
+          ##### Method B: Using dpkg
           **AMD64 systems:**
           ```bash
           wget https://github.com/NDXDeveloper/uubu/releases/download/${{ github.ref_name }}/uubu-${{ github.ref_name }}-amd64.deb
           sudo dpkg -i uubu-${{ github.ref_name }}-amd64.deb
+          # If you have dependency errors, run this:
+          sudo apt-get install -f
           uubu --version
           ```
 
@@ -410,16 +430,20 @@ jobs:
           ```bash
           wget https://github.com/NDXDeveloper/uubu/releases/download/${{ github.ref_name }}/uubu-${{ github.ref_name }}-arm64.deb
           sudo dpkg -i uubu-${{ github.ref_name }}-arm64.deb
+          # If you have dependency errors, run this:
+          sudo apt-get install -f
           uubu --version
           ```
 
           #### Manual installation (all architectures)
           ```bash
           # Linux AMD64
+          wget https://github.com/NDXDeveloper/uubu/releases/download/${{ github.ref_name }}/uubu-linux-amd64
           chmod +x uubu-linux-amd64
           sudo mv uubu-linux-amd64 /usr/local/bin/uubu
 
           # Linux ARM64
+          wget https://github.com/NDXDeveloper/uubu/releases/download/${{ github.ref_name }}/uubu-linux-arm64
           chmod +x uubu-linux-arm64
           sudo mv uubu-linux-arm64 /usr/local/bin/uubu
           ```
@@ -469,7 +493,7 @@ jobs:
           ```
 
           ### 🔧 Technical Details
-          - **Binary size**: ~13MB (includes embedded locales)
+          - **Binary size**: ~3MB (includes embedded locales)
           - **Dependencies**: None (static binary)
           - **License**: MIT
           - **Architectures**: AMD64, ARM64
