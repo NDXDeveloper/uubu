@@ -1,5 +1,5 @@
 # Makefile pour uubu
-.PHONY: build test clean run help install
+.PHONY: build test clean run help install build-arm64 build-all build-deb-arm64 package-all
 
 # Variables
 BINARY_NAME=uubu
@@ -11,6 +11,18 @@ GIT_COMMIT = $(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
 # Flags de build avec injection des variables
 LDFLAGS_BASE = -X main.version=$(VERSION) -X main.buildTime=$(BUILD_TIME) -X main.gitCommit=$(GIT_COMMIT)
 LDFLAGS_RELEASE = -s -w $(LDFLAGS_BASE)
+
+# Détection automatique de l'architecture
+ARCH ?= $(shell uname -m)
+ifeq ($(ARCH),x86_64)
+    GOARCH_HOST = amd64
+else ifeq ($(ARCH),aarch64)
+    GOARCH_HOST = arm64
+else ifeq ($(ARCH),arm64)
+    GOARCH_HOST = arm64
+else
+    GOARCH_HOST = amd64
+endif
 
 # Commandes principales
 check-nfpm: ## Vérifier si nfpm est installé
@@ -50,27 +62,58 @@ install-nfpm: ## Installer nfpm automatiquement
 		fi; \
 	fi
 
+build: ## Compiler le binaire (architecture hôte)
+	@echo "🔨 Compilation pour $(GOARCH_HOST)..."
+	go build -ldflags "$(LDFLAGS_BASE)" -o $(BINARY_NAME) $(MAIN_FILES)
 
-build-deb: install-nfpm ## Construire le package .deb
-	@echo "🔨 Construction du package .deb..."
-	@VERSION=$(VERSION) nfpm package --config nfpm.yaml --packager deb --target uubu-amd64.deb
-	@echo "✅ Package .deb créé dans le dossier dist/"
-	@chmod a+r uubu-amd64.deb
+build-release: ## Compiler le binaire optimisé (release) pour l'architecture hôte
+	@echo "🔨 Compilation release pour $(GOARCH_HOST)..."
+	go build -ldflags "$(LDFLAGS_RELEASE)" -trimpath -o $(BINARY_NAME) $(MAIN_FILES)
+	cp $(BINARY_NAME) $(BINARY_NAME)-linux-$(GOARCH_HOST)
+
+build-amd64: ## Compiler spécifiquement pour AMD64
+	@echo "🔨 Compilation pour AMD64..."
+	GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS_RELEASE)" -trimpath -o $(BINARY_NAME)-linux-amd64 $(MAIN_FILES)
+
+build-arm64: ## Compiler spécifiquement pour ARM64
+	@echo "🔨 Compilation pour ARM64..."
+	GOOS=linux GOARCH=arm64 go build -ldflags "$(LDFLAGS_RELEASE)" -trimpath -o $(BINARY_NAME)-linux-arm64 $(MAIN_FILES)
+
+build-all: build-amd64 build-arm64 ## Compiler pour toutes les architectures
+	@echo "✅ Compilation terminée pour toutes les architectures"
+	@ls -la $(BINARY_NAME)-linux-*
+
+build-deb: install-nfpm build-amd64 ## Construire le package .deb AMD64
+	@echo "🔨 Construction du package .deb AMD64..."
+	@cp $(BINARY_NAME)-linux-amd64 $(BINARY_NAME)
+	@VERSION=$(VERSION) nfpm package --config nfpm.yaml --packager deb --target $(BINARY_NAME)-$(VERSION)-amd64.deb
+	@echo "✅ Package .deb AMD64 créé"
+	@chmod a+r $(BINARY_NAME)-$(VERSION)-amd64.deb
 	@ls -la *.deb
+	@rm $(BINARY_NAME)
 
 
-build: ## Compiler le binaire
-	#go build -o $(BINARY_NAME) $(MAIN_FILES)
-	go build -ldflags "$(LDFLAGS_BASE)" -o uubu main.go
+build-deb-arm64: install-nfpm build-arm64 ## Construire le package .deb ARM64
+	@echo "🔨 Construction du package .deb ARM64..."
+	@cp $(BINARY_NAME)-linux-arm64 $(BINARY_NAME)
+	@# Créer un fichier nfpm temporaire pour ARM64
+	@sed 's/amd64/arm64/g' nfpm.yaml > nfpm-arm64.yaml
+	@VERSION=$(VERSION) nfpm package --config nfpm-arm64.yaml --packager deb --target $(BINARY_NAME)-$(VERSION)-arm64.deb
+	@rm -f nfpm-arm64.yaml
+	@echo "✅ Package .deb ARM64 créé"
+	@chmod a+r $(BINARY_NAME)-$(VERSION)-arm64.deb
+	@ls -la *.deb
+	@rm $(BINARY_NAME)
 
-build-release: ## Compiler le binaire optimisé (release)
-	go build -ldflags "$(LDFLAGS_RELEASE)" -trimpath -o uubu main.go
-	cp uubu uubu-linux-amd64
+build-deb-all: build-deb build-deb-arm64 ## Construire les packages .deb pour toutes les architectures
+	@echo "✅ Tous les packages .deb créés"
+	@ls -la *.deb
 
 version: ## Afficher la version qui sera compilée
 	@echo "Version: $(VERSION)"
 	@echo "Build time: $(BUILD_TIME)"
 	@echo "Git commit: $(GIT_COMMIT)"
+	@echo "Host architecture: $(GOARCH_HOST)"
 
 # Vérification des fichiers de langues
 check-locales: ## Vérifier les fichiers de langues
@@ -109,25 +152,23 @@ test-langs: build ## Tester avec différentes langues
 		UUBU_LANG=$$lang ./$(BINARY_NAME) --version; \
 	done
 
-
 # Tests de base
-test:
-	check-locales
+test: check-locales ## Exécuter les tests
 	@echo "🧪 Exécution des tests..."
 	go test -v ./...
 
 # Tests avec plus de détails
-test-verbose:
+test-verbose: ## Tests détaillés
 	@echo "🔍 Tests détaillés..."
 	go test -v -race ./...
 
 # Tests rapides (sans intégration)
-test-short:
+test-short: ## Tests rapides
 	@echo "⚡ Tests rapides..."
 	go test -short ./...
 
 # Couverture de code
-test-coverage:
+test-coverage: ## Analyse de couverture
 	@echo "📊 Analyse de couverture..."
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
@@ -149,8 +190,12 @@ uninstall: ## Désinstaller le binaire
 clean: ## Nettoyer les fichiers générés
 	@echo "🧹 Nettoyage..."
 	rm -f $(BINARY_NAME)
+	rm -f $(BINARY_NAME)-linux-*
+	rm -f *.deb
 	rm -f coverage.out coverage.html
 	rm -f *.csv
+	rm -f nfpm-arm64.yaml
+	rm -rf dist/
 
 # Commandes de développement
 dev: ## Mode développement avec rebuild automatique
@@ -168,7 +213,6 @@ lint: ## Vérification du code
 bench: ## Benchmarks de performance
 	@echo "⏱️  Benchmarks..."
 	go test -bench=. -benchmem ./...
-
 
 check: ## Vérification complète avant commit
 	@echo "🔄 Vérifications complètes..."
@@ -201,19 +245,34 @@ langs: ## Afficher les langues supportées
 		echo "  - $$lang"; \
 	done
 
-# Package avec toutes les langues
-package: build ## Créer un package avec toutes les langues
-	@echo "📦 Création du package..."
-	@mkdir -p dist
-	@cp $(BINARY_NAME) dist/
-	@cp -r locales dist/
-	@cp README.md dist/
-	@cp LICENSE dist/
-	@tar -czf dist/$(BINARY_NAME)-$(VERSION)-linux-amd64.tar.gz -C dist .
-	@echo "✅ Package créé: dist/$(BINARY_NAME)-$(VERSION)-linux-amd64.tar.gz"
+# Package avec toutes les langues et architectures
+package: build-all ## Créer un package avec toutes les langues et architectures
+	@echo "📦 Création des packages..."
+	@mkdir -p dist/tmp-amd64 dist/tmp-arm64
+	@# Package AMD64
+	@cp $(BINARY_NAME)-linux-amd64 dist/tmp-amd64/$(BINARY_NAME)
+	@cp -r locales dist/tmp-amd64/
+	@cp README.md dist/tmp-amd64/ 2>/dev/null || echo "README.md non trouvé"
+	@cp LICENSE dist/tmp-amd64/ 2>/dev/null || echo "LICENSE non trouvé"
+	@tar -czf dist/$(BINARY_NAME)-$(VERSION)-linux-amd64.tar.gz -C dist/tmp-amd64 .
+	@# Package ARM64
+	@cp $(BINARY_NAME)-linux-arm64 dist/tmp-arm64/$(BINARY_NAME)
+	@cp -r locales dist/tmp-arm64/
+	@cp README.md dist/tmp-arm64/ 2>/dev/null || echo "README.md non trouvé"
+	@cp LICENSE dist/tmp-arm64/ 2>/dev/null || echo "LICENSE non trouvé"
+	@tar -czf dist/$(BINARY_NAME)-$(VERSION)-linux-arm64.tar.gz -C dist/tmp-arm64 .
+	@# Nettoyage des dossiers temporaires
+	@rm -rf dist/tmp-amd64 dist/tmp-arm64
+	@echo "✅ Packages créés:"
+	@ls -la dist/$(BINARY_NAME)-$(VERSION)-linux-*.tar.gz
 
-# Test de la structure des fichiers de locales
-test-locales-structure: ## Tester la structure et cohérence des fichiers de locales
+package-all: package build-deb-all ## Créer tous les packages (tar.gz + deb) pour toutes les architectures
+	@echo "📦 Déplacement des .deb vers dist/..."
+	@mkdir -p dist
+	@mv *.deb dist/ 2>/dev/null || echo "Aucun fichier .deb à déplacer"
+	@echo "✅ Tous les packages créés dans dist/:"
+	@ls -la dist/
+
 # Test de la structure des fichiers de locales
 test-locales-structure: ## Tester la structure et cohérence des fichiers de locales
 	@echo "🧪 Test de la structure des fichiers de locales..."
@@ -299,8 +358,7 @@ test-locales-structure: ## Tester la structure et cohérence des fichiers de loc
 	@echo "🎉 Tous les fichiers de locales sont structurellement cohérents!"
 
 help: ## Afficher cette aide
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # Par défaut, afficher l'aide
 .DEFAULT_GOAL := help
-
