@@ -1,0 +1,55 @@
+name: "uubu"
+arch: "amd64"
+platform: "linux"
+version: "${VERSION}"
+section: "admin"
+priority: "optional"
+maintainer: "NDXDeveloper <NDXDev@gmail.com>"
+description: |
+  Automated system update tool for Ubuntu and Kubuntu distributions.
+  uubu (Update Upgrade Ubuntu) streamlines the process of keeping your
+  system up-to-date by automatically handling APT packages, Snap packages,
+  and Flatpak applications in a single command.
+  .
+  Key features include:
+  - Complete system updates (APT, Snap, Flatpak)
+  - Optional Timeshift snapshot creation for safe rollback
+  - Automatic cleanup of obsolete packages and cache
+  - Safety checks (root prevention, internet connectivity)
+  - Colored terminal output for clear status indication
+  - Configurable options via command-line flags
+  .
+  This tool is particularly useful for system administrators and users
+  who want to automate their update routine while maintaining system
+  safety through optional backup snapshots.
+vendor: "NDXDeveloper"
+homepage: "https://github.com/NDXDeveloper/uubu"
+license: "MIT"
+
+contents:
+  - src: "./uubu-linux-amd64"
+    dst: "/usr/bin/uubu"
+    file_info:
+      mode: 0755
+  - src: "./README.md"
+    dst: "/usr/share/doc/uubu/README.md"
+    file_info:
+      mode: 0644
+  - src: "./LICENSE"
+    dst: "/usr/share/doc/uubu/copyright"
+    file_info:
+      mode: 0644
+
+depends:
+  - "libc6"
+  - "sudo"
+  - "apt"
+
+recommends:
+  - "timeshift"
+
+suggests:
+  - "snapd"
+  - "flatpak"
+
+
