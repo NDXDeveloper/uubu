@@ -273,7 +273,7 @@ func updateSystem(distUpgrade bool) error {
 		printMessage(Yellow, getMessage("autoremove_error"))
 	}
 
-	//Cache cleanup
+	// Cache cleanup
 	printMessage(Blue, getMessage("cleaning_cache"))
 	if _, err := runCommand("sudo", "apt", "autoclean"); err != nil {
 		printMessage(Yellow, getMessage("autoclean_error"))

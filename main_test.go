@@ -132,7 +132,6 @@ func TestCreateSnapshot_NoTimeshift(t *testing.T) {
 	os.Setenv("PATH", "/tmp")
 
 	err := createSnapshot()
-
 	// Ne devrait pas retourner d'erreur même si timeshift n'existe pas
 	if err != nil {
 		t.Errorf("createSnapshot() a retourné une erreur quand timeshift n'est pas installé: %v", err)
@@ -217,7 +216,6 @@ func TestUpdateSnap_NoSnap(t *testing.T) {
 	os.Setenv("PATH", "/tmp")
 
 	err := updateSnap()
-
 	// Ne devrait pas retourner d'erreur si snap n'existe pas
 	if err != nil {
 		t.Errorf("updateSnap() a retourné une erreur quand snap n'est pas installé: %v", err)
@@ -233,7 +231,6 @@ func TestUpdateFlatpak_NoFlatpak(t *testing.T) {
 	os.Setenv("PATH", "/tmp")
 
 	err := updateFlatpak()
-
 	// Ne devrait pas retourner d'erreur si flatpak n'existe pas
 	if err != nil {
 		t.Errorf("updateFlatpak() a retourné une erreur quand flatpak n'est pas installé: %v", err)
