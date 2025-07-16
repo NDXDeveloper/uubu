@@ -158,7 +158,11 @@ func createSnapshot() error {
 	printMessage(Blue, getMessage("creating_snapshot"))
 
 	comment := getMessage("before_update", time.Now().Format("2006-01-02 15:04"))
-	cmd := exec.Command("sudo", "timeshift", "--create", "--comments", comment, "--scripted")
+	// Validation de sécurité : s'assurer que le commentaire ne contient pas de caractères dangereux
+	if strings.ContainsAny(comment, ";|&`$(){}[]<>") {
+		comment = "System update snapshot - " + time.Now().Format("2006-01-02 15:04")
+	}
+	cmd := exec.Command("sudo", "timeshift", "--create", "--comments", comment, "--scripted") // #nosec G204 -- comment validated and from controlled locale files
 
 	if err := cmd.Run(); err != nil {
 		printMessage(Yellow, getMessage("snapshot_failed"))
