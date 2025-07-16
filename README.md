@@ -2,8 +2,8 @@
 
 **Update Upgrade Ubuntu** - An automated system update tool for Ubuntu/Kubuntu written in Go.
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/yourusername/uubu)](https://goreportcard.com/report/github.com/yourusername/uubu)
-[![Release](https://img.shields.io/github/release/yourusername/uubu.svg)](https://github.com/yourusername/uubu/releases)
+[![Go Report Card](https://goreportcard.com/badge/github.com/NDXdeveloper/uubu)](https://goreportcard.com/report/github.com/NDXdeveloper/uubu)
+[![Release](https://img.shields.io/github/release/NDXdeveloper/uubu.svg)](https://github.com/NDXdeveloper/uubu/releases)
 
 ## 📋 Description
 
@@ -26,14 +26,14 @@
 #### From Release (Recommended)
 ```bash
 # Download latest release
-wget https://github.com/yourusername/uubu/releases/latest/download/uubu
-chmod +x uubu
-sudo mv uubu /usr/local/bin/
+wget https://github.com/NDXdeveloper/uubu/releases/latest/download/uubu-linux-amd64
+chmod +x uubu-linux-amd64
+sudo mv uubu-linux-amd64 /usr/local/bin/uubu
 ```
 
 #### From Source
 ```bash
-git clone https://github.com/yourusername/uubu.git
+git clone https://github.com/NDXdeveloper/uubu.git
 cd uubu
 make build
 make install
@@ -96,7 +96,7 @@ uubu --version
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/uubu.git
+git clone https://github.com/NDXdeveloper/uubu.git
 cd uubu
 
 # Build with version info
