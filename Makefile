@@ -203,10 +203,37 @@ dev: ## Mode développement avec rebuild automatique
 	@while inotifywait -e modify *.go locales/*.json 2>/dev/null; do \
 		make build && echo "✅ Rebuild terminé"; \
 	done
-
-lint: ## Vérification du code
-	@echo "🔍 Vérification du code..."
+fmt: ## Formater automatiquement le code
+	@echo "🎨 Formatage du code..."
 	go fmt ./...
+	@if command -v goimports >/dev/null 2>&1; then \
+		echo "📦 Correction des imports..."; \
+		goimports -w .; \
+	else \
+		echo "⚠️  goimports non installé. Installation..."; \
+		go install golang.org/x/tools/cmd/goimports@v0.21.0; \
+		goimports -w .; \
+	fi
+
+fix: ## Corriger automatiquement les erreurs de linting
+	@echo "🔧 Correction automatique des erreurs..."
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run --fix; \
+	else \
+		echo "⚠️  golangci-lint non installé. Installation..."; \
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
+		golangci-lint run --fix; \
+	fi
+
+format-all: fmt fix ## Formater et corriger automatiquement tout le code
+	@echo "✨ Formatage et correction terminés"
+
+lint: ## Vérification du code avec formatage automatique
+	@echo "🎨 Formatage automatique..."
+	@make fmt
+	@echo "🔧 Correction automatique..."
+	@make fix
+	@echo "🔍 Vérification finale..."
 	go vet ./...
 	@make validate-locales
 
