@@ -478,7 +478,7 @@ func main() {
 
 	// System Update
 	if err := updateSystem(distUpgrade); err != nil {
-		log.Fatalf(getMessage("error_update", err))
+		log.Fatal(getMessage("error_update", err))
 	}
 	fmt.Println()
 

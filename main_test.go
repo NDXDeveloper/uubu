@@ -281,6 +281,9 @@ func BenchmarkPrintMessage(b *testing.B) {
 
 func BenchmarkRunCommand(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		runCommand("echo", "test")
+		_, err := runCommand("echo", "test")
+		if err != nil {
+			b.Errorf("Command failed: %v", err)  // b.Errorf au lieu de t.Errorf
+		}
 	}
 }
